@@ -1,0 +1,8 @@
+.env
+data/*.xlsx
+data/*.docx
+data/*.txt
+__pycache__/
+*.pyc
+.chroma/
+.DS_Store
