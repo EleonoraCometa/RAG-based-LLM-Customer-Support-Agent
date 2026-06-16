@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Customer Support Agent</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green: #4F46E5;
+    --green-dark: #3730A3;
+    --green-light: #EEF2FF;
+    --green-mid: #C7D2FE;
+    --bg: #F7F8F6;
+    --surface: #FFFFFF;
+    --surface2: #F2F3F1;
+    --border: #E4E6E2;
+    --text: #1A1C19;
+    --text-muted: #6B7068;
+    --text-light: #9EA49B;
+    --amber: #F59E0B;
+    --amber-light: #FEF3C7;
+    --red: #EF4444;
+    --red-light: #FEE2E2;
+    --radius: 14px;
+    --radius-sm: 8px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── TOP BAR ── */
+  .topbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    z-index: 10;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+    font-size: 17px;
+    letter-spacing: -0.3px;
+  }
+  .logo-icon {
+    width: 32px;
+    height: 32px;
+    background: var(--green);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 16px;
+  }
+  .logo span { color: var(--text-muted); font-weight: 400; font-size: 14px; margin-left: 4px; }
+
+  .api-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .api-label { font-size: 12px; color: var(--text-muted); }
+  .api-input {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 6px 10px;
+    width: 280px;
+    background: var(--surface2);
+    color: var(--text);
+    outline: none;
+    transition: border-color .2s;
+  }
+  .api-input:focus { border-color: var(--green); }
+  .api-status {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--border);
+    transition: background .3s;
+  }
+  .api-status.ok { background: var(--green); }
+
+  /* ── LAYOUT ── */
+  .main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    width: 260px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow-y: auto;
+  }
+  .sidebar-section {
+    padding: 20px 16px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .sidebar-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .8px;
+    text-transform: uppercase;
+    color: var(--text-light);
+    margin-bottom: 12px;
+  }
+
+  /* Cliente cards */
+  .client-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background .15s;
+    margin-bottom: 4px;
+    border: 1.5px solid transparent;
+  }
+  .client-card:hover { background: var(--surface2); }
+  .client-card.active {
+    background: var(--green-light);
+    border-color: var(--green-mid);
+  }
+  .avatar {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: var(--green-mid);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 600; font-size: 13px; color: var(--green-dark);
+    flex-shrink: 0;
+  }
+  .client-card.active .avatar { background: var(--green); color: white; }
+  .client-info { flex: 1; min-width: 0; }
+  .client-name { font-size: 13px; font-weight: 500; }
+  .client-regime {
+    font-size: 11px; color: var(--text-muted);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  /* Domande rapide */
+  .quick-btn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 8px 12px;
+    font-size: 12px;
+    color: var(--text-muted);
+    cursor: pointer;
+    margin-bottom: 6px;
+    font-family: 'DM Sans', sans-serif;
+    transition: all .15s;
+    line-height: 1.4;
+  }
+  .quick-btn:hover {
+    background: var(--green-light);
+    border-color: var(--green-mid);
+    color: var(--green-dark);
+  }
+
+  .new-chat-btn {
+    margin: 16px;
+    padding: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: all .15s;
+    width: calc(100% - 32px);
+  }
+  .new-chat-btn:hover { background: var(--border); color: var(--text); }
+
+  /* ── CHAT AREA ── */
+  .chat-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Client context bar */
+  .context-bar {
+    background: var(--green-light);
+    border-bottom: 1px solid var(--green-mid);
+    padding: 8px 24px;
+    font-size: 12px;
+    color: var(--green-dark);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    min-height: 36px;
+    transition: all .3s;
+  }
+  .context-bar.hidden { display: none; }
+  .context-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+
+  /* Messages */
+  .messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 32px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .message {
+    display: flex;
+    gap: 12px;
+    max-width: 720px;
+    animation: fadeUp .25s ease;
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .message.user { align-self: flex-end; flex-direction: row-reverse; }
+
+  .msg-avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 600;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .msg-avatar.ai { background: var(--green); color: white; font-size: 15px; }
+  .msg-avatar.user { background: var(--text); color: white; }
+
+  .msg-bubble {
+    padding: 13px 16px;
+    border-radius: 16px;
+    font-size: 14px;
+    line-height: 1.65;
+    max-width: 560px;
+  }
+  .message.ai .msg-bubble {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-bottom-left-radius: 4px;
+    color: var(--text);
+  }
+  .message.user .msg-bubble {
+    background: var(--green);
+    color: white;
+    border-bottom-right-radius: 4px;
+  }
+
+  .escalation-notice {
+    margin-top: 10px;
+    padding: 10px 14px;
+    background: var(--amber-light);
+    border: 1px solid #FDE68A;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    color: #92400E;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .escalation-notice .icon { flex-shrink: 0; font-size: 14px; }
+
+  /* Tool badge */
+  .tool-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    font-weight: 500;
+    padding: 2px 7px;
+    border-radius: 20px;
+    margin-bottom: 6px;
+    letter-spacing: .3px;
+  }
+  .tool-badge.rag { background: #EDE9FE; color: #5B21B6; }
+  .tool-badge.customer { background: #DBEAFE; color: #1E40AF; }
+  .tool-badge.escalation { background: var(--amber-light); color: #92400E; }
+  .tool-badge.ratelimit { background: #FEE2E2; color: #991B1B; }
+
+  .ratelimit-notice {
+    margin-top: 10px;
+    padding: 10px 14px;
+    background: #FEF2F2;
+    border: 1px solid #FECACA;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    color: #991B1B;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .ratelimit-notice .icon { flex-shrink: 0; font-size: 14px; }
+
+  /* Typing indicator */
+  .typing {
+    display: flex;
+    gap: 12px;
+    max-width: 720px;
+    animation: fadeUp .25s ease;
+  }
+  .typing-dots {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    border-bottom-left-radius: 4px;
+    padding: 14px 18px;
+    display: flex;
+    gap: 4px;
+    align-items: center;
+  }
+  .typing-dots span {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--text-light);
+    animation: bounce .9s ease-in-out infinite;
+  }
+  .typing-dots span:nth-child(2) { animation-delay: .15s; }
+  .typing-dots span:nth-child(3) { animation-delay: .3s; }
+  @keyframes bounce {
+    0%,60%,100% { transform: translateY(0); }
+    30% { transform: translateY(-5px); }
+  }
+
+  /* Empty state */
+  .empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    gap: 12px;
+    padding: 40px;
+    text-align: center;
+  }
+  .empty-icon {
+    width: 56px; height: 56px;
+    background: var(--green-light);
+    border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px;
+    margin-bottom: 4px;
+  }
+  .empty-state h3 { font-size: 17px; font-weight: 500; color: var(--text); }
+  .empty-state p { font-size: 13px; max-width: 320px; line-height: 1.6; }
+
+  /* Input bar */
+  .input-bar {
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    padding: 16px 24px;
+    flex-shrink: 0;
+  }
+  .input-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    max-width: 720px;
+  }
+  .input-wrap {
+    flex: 1;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface2);
+    display: flex;
+    align-items: flex-end;
+    padding: 10px 14px;
+    gap: 8px;
+    transition: border-color .2s;
+  }
+  .input-wrap:focus-within { border-color: var(--green); background: white; }
+  textarea {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    color: var(--text);
+    resize: none;
+    outline: none;
+    max-height: 120px;
+    line-height: 1.5;
+    min-height: 22px;
+  }
+  textarea::placeholder { color: var(--text-light); }
+  .send-btn {
+    width: 38px; height: 38px;
+    background: var(--green);
+    border: none;
+    border-radius: 10px;
+    color: white;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background .15s, transform .1s;
+    flex-shrink: 0;
+  }
+  .send-btn:hover { background: var(--green-dark); }
+  .send-btn:active { transform: scale(.95); }
+  .send-btn:disabled { background: var(--border); cursor: not-allowed; }
+  .send-btn svg { width: 16px; height: 16px; }
+
+  /* Scrollbar */
+  .messages::-webkit-scrollbar { width: 4px; }
+  .messages::-webkit-scrollbar-track { background: transparent; }
+  .messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-icon">🧾</div>
+    AI Support <span>Agent</span>
+  </div>
+  <div class="api-row">
+    <span class="api-label">Backend</span>
+    <span id="serverStatusText" style="font-size: 12px; color: var(--text-muted); font-family: 'DM Mono', monospace;">connessione...</span>
+    <div class="api-status" id="apiStatus"></div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-title">Cliente attivo</div>
+      <div id="clientList"></div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-title">Domande rapide</div>
+      <div id="quickQuestions"></div>
+    </div>
+
+    <button class="new-chat-btn" onclick="newChat()">↺ Nuova conversazione</button>
+  </div>
+
+  <!-- CHAT -->
+  <div class="chat-area">
+    <div class="context-bar hidden" id="contextBar">
+      <div class="context-dot"></div>
+      <span id="contextText"></span>
+    </div>
+
+    <div class="messages" id="messages">
+      <div class="empty-state" id="emptyState">
+        <div class="empty-icon">💬</div>
+        <h3>Come possiamo aiutarti?</h3>
+        <p>Seleziona un cliente dalla barra laterale e fai una domanda.</p>
+      </div>
+    </div>
+
+    <div class="input-bar">
+      <div class="input-row">
+        <div class="input-wrap">
+          <textarea id="userInput" placeholder="Scrivi la tua domanda..." rows="1"
+            onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+        </div>
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+
+// ── DATA ──────────────────────────────────────────────────────────────────
+
+const CUSTOMERS = {
+  "Sara Bianchi": {
+    regime: "Ordinario",
+    cassa: "INARCASSA",
+    commercialista: "Dott.ssa Conti",
+    apertura_piva: "2019-07-01",
+    fatturato_2025: "€95.200",
+    fatturato_2026: "€41.000 (YTD)",
+    initials: "SB"
+  },
+  "Luca Neri": {
+    regime: "Forfettario",
+    cassa: "INPS Gestione Separata",
+    commercialista: "Dott. Ferrari",
+    apertura_piva: "2022-01-10",
+    fatturato_2025: "€18.000",
+    fatturato_2026: "€7.500 (YTD)",
+    initials: "LN"
+  },
+  "Giulia Esposito": {
+    regime: "Semplificato",
+    cassa: "Cassa Forense",
+    commercialista: "Dott.ssa Leone",
+    apertura_piva: "2020-11-20",
+    fatturato_2025: "€62.400",
+    fatturato_2026: "€28.900 (YTD)",
+    initials: "GE"
+  }
+};
+
+
+const QUICK_QUESTIONS = [
+  "Quali sono le scadenze fiscali principali?",
+  "Come creo una fattura elettronica?",
+  "Qual è il mio regime fiscale?",
+  "Quanto ho fatturato nel 2025?",
+  "Come funziona la nota di credito?",
+  "Cos'è il ravvedimento operoso?",
+  "Chi è il mio commercialista?",
+  "Cosa sono i contributi previdenziali?"
+];
+
+// ── STATE ──────────────────────────────────────────────────────────────────
+
+let activeClient = null;
+let history = [];
+let isLoading = false;
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+
+function init() {
+  // Render client list
+  const list = document.getElementById('clientList');
+  Object.entries(CUSTOMERS).forEach(([name, data]) => {
+    const card = document.createElement('div');
+    card.className = 'client-card';
+    card.dataset.name = name;
+    card.innerHTML = `
+      <div class="avatar">${data.initials}</div>
+      <div class="client-info">
+        <div class="client-name">${name}</div>
+        <div class="client-regime">${data.regime} · ${data.cassa}</div>
+      </div>`;
+    card.onclick = () => selectClient(name);
+    list.appendChild(card);
+  });
+
+  // Render quick questions
+  const qq = document.getElementById('quickQuestions');
+  QUICK_QUESTIONS.forEach(q => {
+    const btn = document.createElement('button');
+    btn.className = 'quick-btn';
+    btn.textContent = q;
+    btn.onclick = () => {
+      document.getElementById('userInput').value = q;
+      autoResize(document.getElementById('userInput'));
+      updateSendBtn();
+      document.getElementById('userInput').focus();
+    };
+    qq.appendChild(btn);
+  });
+}
+
+// ── API KEY ────────────────────────────────────────────────────────────────
+
+// ── SERVER STATUS ──────────────────────────────────────────────────────────
+
+async function checkServerHealth() {
+  const status = document.getElementById('apiStatus');
+  const statusText = document.getElementById('serverStatusText');
+  try {
+    const r = await fetch('http://127.0.0.1:8000/health');
+    if (r.ok) {
+      const data = await r.json();
+      if (data.agent_loaded) {
+        status.className = 'api-status ok';
+        statusText.textContent = 'agent pronto';
+        statusText.style.color = 'var(--green-dark)';
+        return true;
+      } else {
+        status.className = 'api-status';
+        statusText.textContent = 'agent in caricamento...';
+        return false;
+      }
+    }
+  } catch (e) {
+    status.className = 'api-status';
+    statusText.textContent = 'server offline';
+    statusText.style.color = '#EF4444';
+  }
+  return false;
+}
+
+// Polling ogni 2 secondi finché il server non risponde
+setInterval(checkServerHealth, 2000);
+checkServerHealth();
+
+
+// ── CLIENT ─────────────────────────────────────────────────────────────────
+
+async function selectClient(name) {
+  // Se sto cambiando cliente, ripulisci la chat e la memoria server
+  const isChangingClient = activeClient !== null && activeClient !== name;
+
+  activeClient = name;
+  document.querySelectorAll('.client-card').forEach(c => {
+    c.classList.toggle('active', c.dataset.name === name);
+  });
+  const bar = document.getElementById('contextBar');
+  const ctx = document.getElementById('contextText');
+  const data = CUSTOMERS[name];
+  bar.classList.remove('hidden');
+  ctx.textContent = `Cliente: ${name} · ${data.regime} · Fatturato 2025: ${data.fatturato_2025}`;
+  updateSendBtn();
+
+  // Reset chat al cambio cliente (simula nuova sessione = nuovo login)
+  if (isChangingClient) {
+    await newChat();
+  }
+}
+
+// ── CHAT ───────────────────────────────────────────────────────────────────
+
+async function sendMessage() {
+  const input = document.getElementById('userInput');
+  const text = input.value.trim();
+  if (!text || isLoading) return;
+
+  // Add user message
+  addMessage('user', text);
+  input.value = '';
+  autoResize(input);
+  updateSendBtn();
+
+  // Add to history
+  history.push({ role: 'user', content: text });
+
+  // Show typing
+  const typingEl = showTyping();
+  isLoading = true;
+  updateSendBtn();
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+
+    const response = await fetch('http://127.0.0.1:8000/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: text,
+        client_name: activeClient
+      }),
+      signal: controller.signal
+    });
+
+    clearTimeout(timeoutId);
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.detail || 'Errore server');
+    }
+
+    let cleanText = data.risposta || '';
+    const source = data.source;
+    const isEscalation = data.escalation;
+    const isRateLimited = data.rate_limited;
+
+    // Fallback se la risposta è vuota
+    if (!cleanText.trim()) {
+      cleanText = "Non siamo riusciti a generare una risposta. Riprova o riformula la domanda.";
+    }
+
+    // Add AI response
+    removeTyping(typingEl);
+    addMessage('ai', cleanText, source, isRateLimited);
+
+    // Add to history
+    history.push({ role: 'assistant', content: cleanText });
+
+  } catch (err) {
+    removeTyping(typingEl);
+    let msg = err.message;
+    if (err.name === 'AbortError') {
+      msg = "La risposta sta impiegando troppo tempo. Riprova tra qualche secondo.";
+    } else {
+      msg = `Si è verificato un errore: ${msg}. Verifica che il server Python sia avviato.`;
+    }
+    addMessage('ai', msg, 'GENERAL');
+  }
+
+  isLoading = false;
+  updateSendBtn();
+}
+
+function addMessage(role, text, source, isRateLimited) {
+  const msgs = document.getElementById('messages');
+  const empty = document.getElementById('emptyState');
+  if (empty) empty.remove();
+
+  const isEscalation = source === 'ESCALATION' || text.startsWith('ESCALATION:');
+
+  const div = document.createElement('div');
+  div.className = `message ${role}`;
+
+  const avatarHTML = role === 'ai'
+    ? `<div class="msg-avatar ai">🧾</div>`
+    : `<div class="msg-avatar user">${activeClient ? CUSTOMERS[activeClient]?.initials || '?' : 'U'}</div>`;
+
+  let badgeHTML = '';
+  if (role === 'ai' && source) {
+    const badges = {
+      RAG: ['rag', '📚 Knowledge base'],
+      CUSTOMER: ['customer', '👤 Dati cliente'],
+      ESCALATION: ['escalation', '⚠️ Escalation'],
+      RATE_LIMIT: ['ratelimit', '⏱️ Limite richieste'],
+      GENERAL: ['', '']
+    };
+    const [cls, label] = badges[source] || ['', ''];
+    if (cls) badgeHTML = `<div class="tool-badge ${cls}">${label}</div><br>`;
+  }
+
+  const cleanText = text.replace('ESCALATION:', '').trim();
+  const formattedText = cleanText.replace(/\n/g, '<br>');
+
+  let noticeHTML = '';
+  if (isRateLimited || source === 'RATE_LIMIT') {
+    noticeHTML = `
+      <div class="ratelimit-notice">
+        <span class="icon">⏱️</span>
+        <span>Stiamo gestendo molte richieste contemporaneamente. <strong>Riprova tra qualche secondo.</strong></span>
+      </div>`;
+  } else if (isEscalation) {
+    noticeHTML = `
+      <div class="escalation-notice">
+        <span class="icon">⚠️</span>
+        <span>Ti stiamo mettendo in contatto con un <strong>Customer Success Consultant</strong>. Ti risponderà al più presto.</span>
+      </div>`;
+  }
+
+  div.innerHTML = `
+    ${avatarHTML}
+    <div>
+      ${badgeHTML}
+      <div class="msg-bubble">${formattedText}</div>
+      ${noticeHTML}
+    </div>`;
+
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function showTyping() {
+  const msgs = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = 'typing';
+  div.innerHTML = `
+    <div class="msg-avatar ai">🧾</div>
+    <div class="typing-dots">
+      <span></span><span></span><span></span>
+    </div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return div;
+}
+
+function removeTyping(el) {
+  if (el && el.parentNode) el.remove();
+}
+
+async function newChat() {
+  history = [];
+  // Reset memoria server-side
+  try {
+    await fetch('http://127.0.0.1:8000/reset', { method: 'POST' });
+  } catch (e) {
+    console.warn('Server non raggiungibile per reset:', e);
+  }
+  const msgs = document.getElementById('messages');
+  msgs.innerHTML = `
+    <div class="empty-state" id="emptyState">
+      <div class="empty-icon">💬</div>
+      <h3>Come possiamo aiutarti?</h3>
+      <p>Seleziona un cliente dalla barra laterale e fai una domanda.</p>
+    </div>`;
+}
+
+// ── UI HELPERS ─────────────────────────────────────────────────────────────
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  updateSendBtn();
+}
+
+function updateSendBtn() {
+  const btn = document.getElementById('sendBtn');
+  const hasText = document.getElementById('userInput').value.trim().length > 0;
+  btn.disabled = !hasText || isLoading;
+}
+
+init();
+</script>
+</body>
+</html>
